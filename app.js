@@ -18,8 +18,6 @@ const bot = apiai(process.env.API_AI_CLIENT_TOKEN)
 const nexmo = new Nexmo({
   apiKey: process.env.NEXMO_API_KEY,
   apiSecret: process.env.NEXMO_API_SECRET,
-  applicationId: process.env.NEXMO_API_SECRET,
-  privateKey: 'private.key',
 })
 
 const pusher = new Pusher({
