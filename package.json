@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "Demo of Nexmo",
   "main": "index.js",
+  "engines": {
+    "node": "7.4.0"
+  },
   "scripts": {
     "start": "babel-watch app.js"
   },
