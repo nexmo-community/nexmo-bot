@@ -40,9 +40,27 @@
         font-size: 3em;
       }
 
-      #logo {
+      #bot {
+        position: relative;
         width: 40vw;
+        height: 40vw;
         margin: 5vw;
+      }
+
+      #logo, #robot {
+        position: absolute;
+        top: 0; right: 0; bottom: 0; left: 0;
+        background-repeat: no-repeat;
+        background-size: contain;
+        background-position: center center;
+      }
+
+      #logo {
+        background-image: url('/logo.svg');
+      }
+
+      #robot {
+        background-image: url('/robot.svg');
       }
 
       small {
@@ -67,6 +85,18 @@
         height: 50vh;
         margin-top: 50vh;
       }
+
+      .spin {
+        animation-name: spin;
+        animation-timing-function: cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        animation-duration: 1.8s;
+      }
+
+      @keyframes spin {
+          from { transform: rotate(0deg) }
+          to { transform: rotate(180deg) }
+      }
+
     </style>
 
     <script>
@@ -80,6 +110,8 @@
 
       var channel = pusher.subscribe('message');
 
+      var animation = ['bounce', 'spin']
+
       channel.bind('new', function(data) {
         var template = document.querySelector('#bubble');
         template.content.querySelector('p').textContent = data.message;
@@ -90,12 +122,31 @@
         setTimeout(function() {
           var child = document.querySelector('#feed > div:not(.top)')
           child.classList.add('top');
-        }, 250)
+        }, 3000)
+
+        animate();
       });
+
+      function animate() {
+        document.querySelector('#robot').classList.remove('animated')
+        document.querySelector('#robot').classList.remove(animation[0])
+        document.querySelector('#logo').classList.remove('animated')
+        document.querySelector('#logo').classList.remove(animation[1])
+
+        setTimeout(function(){
+          document.querySelector('#robot').classList.add('animated')
+          document.querySelector('#robot').classList.add(animation[0])
+          document.querySelector('#logo').classList.add('animated')
+          document.querySelector('#logo').classList.add(animation[1])
+        }, 10)
+      }
     </script>
   </head>
   <body>
-    <img src="/logo.svg" alt="" id="logo">
+    <div id="bot">
+      <div id="logo"></div>
+      <div id="robot"></div>
+    </div>
     <h1>Send "Hello" to <%= nexmo_number %></h1>
 
     <div id="feed">
