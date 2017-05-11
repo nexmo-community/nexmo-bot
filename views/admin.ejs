@@ -1,0 +1,63 @@
+<!doctype html>
+<html class="no-js" lang="">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <title></title>
+    <meta name="description" content="">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.0.0-alpha.6/css/bootstrap.min.css">
+  </head>
+  <body>
+    <div class="container">
+      <br>
+      <h1>Nexmo Bot - Admin</h1>
+      <hr>
+      <br>
+      <h3>Numbers  <span class="badge badge-default"><%= Object.keys(numbers).length %></span></h3>
+      <table class="table">
+        <thead>
+          <th>Number</th>
+          <th>First Name</th>
+          <th>Last Name</th>
+          <th>Coupon issued</th>
+          <th>Created At</th>
+        </thead>
+        <tbody>
+          <% for(var key in numbers) { %>
+            <tr>
+              <td><%= key %></td>
+              <td><%= numbers[key].ni.first_name || '-' %></td>
+              <td><%= numbers[key].ni.last_name || '-' %></td>
+              <td><%= numbers[key].coupon_issued %></td>
+              <td><%= new Date(numbers[key].created_at) %></td>
+            </tr>
+          <% } %>
+        </tbody>
+      </table>
+
+      <br>
+      <h3>Messages  <span class="badge badge-default"><%= inboundMessages.length %></span></h3>
+
+
+      <table class="table">
+        <thead>
+          <th>Text</th>
+          <th>Created At</th>
+          <th>From</th>
+          <th>To</th>
+        </thead>
+        <tbody>
+          <% for(var message of inboundMessages) { %>
+            <tr>
+              <td><%= message.text %></td>
+              <td><%= new Date(message.created_at) %></td>
+              <td><%= message.msisdn || '-' %></td>
+              <td><%= message.to || '-' %></td>
+            </tr>
+          <% } %>
+        </tbody>
+      </table>
+    </div>
+  </body>
+</html>

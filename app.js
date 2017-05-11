@@ -5,6 +5,7 @@ import apiai from 'apiai'
 import Nexmo from 'nexmo'
 import Pusher from 'pusher'
 import redis from 'redis'
+import basicAuth from 'basic-auth'
 
 // Load the env file
 try {
@@ -35,6 +36,26 @@ const pusher = new Pusher({
 app.use(bodyParser.json())
 app.use(express.static('public'))
 app.set('view engine', 'ejs')
+
+
+const auth = function (req, res, next) {
+  function unauthorized(res) {
+    res.set('WWW-Authenticate', 'Basic realm=Authorization Required')
+    return res.send(401)
+  }
+
+  const user = basicAuth(req)
+
+  if (!user || !user.name || !user.pass) {
+    return unauthorized(res)
+  }
+
+  if (user.name === process.env.ADMIN_USERNAME && user.pass === process.env.ADMIN_PASSWORD) {
+    return next()
+  } else {
+    return unauthorized(res)
+  }
+}
 
 const pushMessage = function(message, number) {
   pusher.trigger('message', 'new', {
@@ -82,12 +103,18 @@ const postNiPrePushMessage = function(ni, number, fallback) {
 
 const updateNumberWithNI = function(number, NIPayload = {}) {
   client.hget('numbers', number, function(err, result) {
-    var payload = {}
+    const time = (new Date).getTime()
+
+    var payload = {
+      created_at: time,
+    }
 
     if (result) {
       payload = {
+        ...payload,
         ni: NIPayload,
         ...JSON.parse(result),
+        updated_at: time,
       }
     }
 
@@ -141,9 +168,14 @@ const issueCoupon = function(inboundNumberFrom, inboundNumberTo, state = {}) {
     } else {
       if (response.messages[0].status == '0') {
         console.log('Send success');
+
+        const time = (new Date).getTime()
+
         const payload = {
+          created_at: time,
           ...state,
-          coupon_issued: true
+          updated_at: time,
+          coupon_issued: true,
         }
 
         client.hset('numbers', outboundNumberTo, JSON.stringify(payload))
@@ -172,16 +204,46 @@ const tryIssueCoupon = function(inboundNumberFrom, inboundNumberTo) {
   }
 }
 
+const storeMessage = function(text, msisdn, to) {
+  var payload = {
+    text,
+    msisdn,
+    to,
+    created_at: (new Date).getTime(),
+  }
+
+  payload = JSON.stringify(payload)
+
+  client.rpush('inbound_messages', payload)
+}
+
 app.post('/sms', (req, res) => {
   performBotAction(req.body.text, req.body.msisdn)
   tryIssueCoupon(req.body.msisdn, req.body.to)
+  storeMessage(req.body.text, req.body.msisdn, req.body.to)
   res.sendStatus(200)
 })
 
 app.get('/sms', (req, res) => {
   performBotAction(req.query.text, req.query.msisdn)
   tryIssueCoupon(req.query.msisdn, req.query.to)
+  storeMessage(req.query.text, req.query.msisdn, req.query.to)
   res.sendStatus(200)
+})
+
+app.get('/admin', auth, (req, res) => {
+  client.hgetall('numbers', function (err, numbers) {
+    client.lrange('inbound_messages', 0, -1, function(err, inboundMessages) {
+      for (var key in numbers) {
+        numbers[key] = JSON.parse(numbers[key])
+      }
+
+      res.render('admin', {
+        numbers: numbers,
+        inboundMessages: inboundMessages.map(function(inboundMessage) { return JSON.parse(inboundMessage) })
+      })
+    })
+  })
 })
 
 app.get('/', (req, res) => {
