@@ -234,13 +234,18 @@ app.get('/sms', (req, res) => {
 app.get('/admin', auth, (req, res) => {
   client.hgetall('numbers', function (err, numbers) {
     client.lrange('inbound_messages', 0, -1, function(err, inboundMessages) {
+      // Handle numbers being explicit null
+      numbers = numbers || {}
+
       for (var key in numbers) {
         numbers[key] = JSON.parse(numbers[key])
       }
 
+      inboundMessages = inboundMessages.map(function(inboundMessage) { return JSON.parse(inboundMessage) })
+
       res.render('admin', {
-        numbers: numbers,
-        inboundMessages: inboundMessages.map(function(inboundMessage) { return JSON.parse(inboundMessage) })
+        numbers,
+        inboundMessages,
       })
     })
   })
