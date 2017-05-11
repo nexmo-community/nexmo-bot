@@ -13,7 +13,9 @@ try {
   console.log(error)
 }
 
-const client = redis.createClient()
+const client = redis.createClient({
+  url: process.env.REDIS_URL || 'redis://localhost:6379/0'
+})
 
 const app = express()
 const bot = apiai(process.env.API_AI_CLIENT_TOKEN)
