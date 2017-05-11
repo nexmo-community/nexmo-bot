@@ -34,24 +34,62 @@ app.use(bodyParser.json())
 app.use(express.static('public'))
 app.set('view engine', 'ejs')
 
-const pushMessage = function (message, number) {
+const pushMessage = function(message, number) {
   pusher.trigger('message', 'new', {
     message,
     number,
   })
 }
 
-const tryGreetingWithCnam = function (number, fallback) {
+const tryGreetingWithCnam = function(number, fallback) {
+  client.hget('numbers', number, function(err, result) {
+    if (result) {
+      result = JSON.parse(result)
+      if (result.ni) {
+        console.log(`Already have information about ${number}`)
+        postNiPrePushMessage(result.ni, number, fallback)
+      } else {
+        performNILookup(number, fallback)
+      }
+    } else {
+      performNILookup(number, fallback)
+    }
+  })
+}
+
+const performNILookup = function(number, fallback) {
+  console.log(`Getting information about ${number}`);
   nexmo.numberInsight.get({level: 'standard', number: number, cnam: true}, function (error, payload) {
     if (error) {
       console.log('Error with NI')
     } else {
-      if(payload && payload.first_name && payload.last_name) {
-        pushMessage(`Hello ${payload.first_name} ${payload.last_name.slice(0, 1)}!`, number)
-      } else {
-        pushMessage(fallback, number)
+      console.log(`Got information about ${number}`);
+      postNiPrePushMessage(payload, number, fallback)
+      updateNumberWithNI(number, payload)
+    }
+  })
+}
+
+const postNiPrePushMessage = function(ni, number, fallback) {
+  if (ni && ni.first_name && ni.last_name) {
+    pushMessage(`Hello ${ni.first_name} ${ni.last_name.slice(0, 1)}!`, number)
+  } else {
+    pushMessage(fallback, number)
+  }
+}
+
+const updateNumberWithNI = function(number, NIPayload = {}) {
+  client.hget('numbers', number, function(err, result) {
+    var payload = {}
+
+    if (result) {
+      payload = {
+        ni: NIPayload,
+        ...JSON.parse(result),
       }
     }
+
+    client.hset('numbers', number, JSON.stringify(payload))
   })
 }
 
@@ -92,18 +130,19 @@ const issueCoupon = function(inboundNumberFrom, inboundNumberTo, state = {}) {
   const outboundNumberFrom = inboundNumberTo
   const outboundNumberTo = inboundNumberFrom
 
+  console.log(`Sending a coupon from ${outboundNumberFrom} to ${outboundNumberTo}`);
+
   nexmo.message.sendSms(outboundNumberFrom, outboundNumberTo, text, function(err, response) {
     if (err) {
       console.log("SMS could not be sent!");
       console.log(err);
     } else {
       if (response.messages[0].status == '0') {
+        console.log('Send success');
         const payload = {
           ...state,
           coupon_issued: true
         }
-
-        console.log(payload);
 
         client.hset('numbers', outboundNumberTo, JSON.stringify(payload))
       } else {
