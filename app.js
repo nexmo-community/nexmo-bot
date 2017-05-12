@@ -254,7 +254,7 @@ app.get('/admin', auth, (req, res) => {
 app.get('/', (req, res) => {
   res.render('index', {
     pusher_key: process.env.PUSHER_KEY,
-    nexmo_number: '+' + process.env.NEXMO_NUMBER,
+    nexmo_number: process.env.NEXMO_NUMBER,
   })
 })
 
