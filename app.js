@@ -34,6 +34,7 @@ const pusher = new Pusher({
 })
 
 app.use(bodyParser.json())
+app.use(bodyParser.urlencoded({ extended: true }))
 app.use(express.static('public'))
 app.set('view engine', 'ejs')
 
@@ -217,19 +218,26 @@ const storeMessage = function(text, msisdn, to) {
   client.rpush('inbound_messages', payload)
 }
 
-app.post('/sms', (req, res) => {
-  performBotAction(req.body.text, req.body.msisdn)
-  tryIssueCoupon(req.body.msisdn, req.body.to)
-  storeMessage(req.body.text, req.body.msisdn, req.body.to)
-  res.sendStatus(200)
-})
+const handleSms = function(request, response) {
+  if (request.query.msisdn) {
+    performBotAction(request.query.text, request.query.msisdn)
+    tryIssueCoupon(request.query.msisdn, request.query.to)
+    storeMessage(request.query.text, request.query.msisdn, request.query.to)
+  } else if (request.body.msisdn) {
+    performBotAction(request.body.text, request.body.msisdn)
+    tryIssueCoupon(request.body.msisdn, request.body.to)
+    storeMessage(request.body.text, request.body.msisdn, request.body.to)
+  } else {
+    console.log('Did not get expected payload');
+    console.log(request.query);
+    console.log(request.body);
+  }
 
-app.get('/sms', (req, res) => {
-  performBotAction(req.query.text, req.query.msisdn)
-  tryIssueCoupon(req.query.msisdn, req.query.to)
-  storeMessage(req.query.text, req.query.msisdn, req.query.to)
-  res.sendStatus(200)
-})
+  response.sendStatus(200)
+}
+
+app.post('/sms', handleSms)
+app.get('/sms', handleSms)
 
 app.get('/admin', auth, (req, res) => {
   client.hgetall('numbers', function (err, numbers) {
